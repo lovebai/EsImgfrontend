@@ -1,0 +1,28 @@
+{
+  "name": "easyimg-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "set \"NODE_OPTIONS=--no-deprecation\" && next dev -p 8002",
+    "build": "set \"NODE_OPTIONS=--no-deprecation\" && next build",
+    "start": "set \"NODE_OPTIONS=--no-deprecation\" && next start",
+    "lint": "next lint",
+    "dev:debug": "set \"NODE_OPTIONS=--inspect --no-deprecation\" && next dev -p 8002"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18",
+    "react-dom": "18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
