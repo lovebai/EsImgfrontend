@@ -140,9 +140,15 @@ export default function LoginPage() {
       return;
     }
     
+    // In development mode, use a test token if none is provided
+    let tokenToUse = turnstileToken;
+    if (process.env.NODE_ENV === 'development' && !turnstileToken) {
+      tokenToUse = 'test-token'; // Use a test token in development
+    }
+    
     try {
       // Pass Turnstile token to login function
-      const success = await login(username, password, turnstileToken);
+      const success = await login(username, password, tokenToUse);
       if (success) {
         router.push('/dashboard');
       } else {

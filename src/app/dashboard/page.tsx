@@ -4,6 +4,10 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { getFiles, deleteFile, createDirectory, adminUploadFiles, renameFile } from '@/lib/api';
+import { FileListResponse } from '@/lib/api';
+import Pagination from '@/components/Pagination';
+import FileGrid from '@/components/FileGrid';
+import Breadcrumb from '@/components/Breadcrumb';
 
 export default function DashboardPage() {
   const [files, setFiles] = useState<any[]>([]);
@@ -23,6 +27,12 @@ export default function DashboardPage() {
   const [newFilename, setNewFilename] = useState('');
   const [currentPath, setCurrentPath] = useState('/'); // Track current directory path
   const [copyStatus, setCopyStatus] = useState<{[key: string]: string}>({}); // Track copy status for each file
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalFiles: 0,
+    perPage: 20
+  }); // Pagination state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
@@ -35,15 +45,22 @@ export default function DashboardPage() {
     }
     
     // Load files if authenticated
-    loadFiles(currentPath);
+    loadFiles(currentPath, 1); // Reset to first page when path changes
+    setPagination(prev => ({...prev, currentPage: 1}));
   }, [isAuthenticated, router, currentPath]);
 
-  const loadFiles = async (path: string = '/') => {
+  const loadFiles = async (path: string = '/', page: number = 1) => {
     try {
       setIsLoading(true);
-      // Fetch files from the backend for the specified path
-      const filesData = await getFiles(path);
-      setFiles(filesData);
+      // Fetch files from the backend for the specified path and page
+      const filesData: FileListResponse = await getFiles(path, page);
+      setFiles(filesData.files);
+      setPagination({
+        currentPage: filesData.pagination.current_page,
+        totalPages: filesData.pagination.total_pages,
+        totalFiles: filesData.pagination.total_files,
+        perPage: filesData.pagination.per_page
+      });
     } catch (error) {
       console.error('Failed to load files:', error);
     } finally {
@@ -213,6 +230,25 @@ export default function DashboardPage() {
     }
   };
 
+  // Pagination functions
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= pagination.totalPages) {
+      loadFiles(currentPath, page);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (pagination.currentPage > 1) {
+      loadFiles(currentPath, pagination.currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (pagination.currentPage < pagination.totalPages) {
+      loadFiles(currentPath, pagination.currentPage + 1);
+    }
+  };
+
   const handleLogout = () => {
     logout();
   };
@@ -247,42 +283,11 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* Breadcrumb Navigation */}
-          <div className="mb-4">
-            <nav className="flex" aria-label="Breadcrumb">
-              <ol className="inline-flex items-center space-x-1 md:space-x-3">
-                <li className="inline-flex items-center">
-                  <button 
-                    onClick={() => setCurrentPath('/')}
-                    className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    Home
-                  </button>
-                </li>
-                {currentPath !== '/' && currentPath.split('/').filter(part => part !== '').map((part, index, array) => (
-                  <li key={index} className="inline-flex items-center">
-                    <svg className="w-3 h-3 mx-1 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4"/>
-                    </svg>
-                    {index === array.length - 1 ? (
-                      <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400 md:ml-2">
-                        {part}
-                      </span>
-                    ) : (
-                      <button 
-                        onClick={() => {
-                          const pathParts = array.slice(0, index + 1);
-                          setCurrentPath('/' + pathParts.join('/'));
-                        }}
-                        className="ml-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 md:ml-2"
-                      >
-                        {part}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          </div>
+          <Breadcrumb 
+            currentPath={currentPath}
+            onNavigateToRoot={() => setCurrentPath('/')}
+            onNavigateToPath={(path) => setCurrentPath(path)}
+          />
 
           {/* File Management Header */}
           <div className="flex justify-between items-center mb-6">
@@ -303,95 +308,41 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-              {!files || files.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 dark:text-gray-400">No files or directories found</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
-                  {files.map((file, index) => (
-                    <div key={`${file.name}-${index}`} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow">
-                      <div className="flex flex-col items-center">
-                        {file.is_dir ? (
-                          // Directory icon
-                          <button 
-                            onClick={() => handleNavigateToDirectory(file.name)}
-                            className="flex-shrink-0 h-16 w-16 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none mb-2"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                          </button>
-                        ) : (
-                          // File image
-                          <img 
-                            src={file.url} 
-                            alt={file.name} 
-                            className="h-16 w-16 object-cover rounded-md mb-2"
-                          />
-                        )}
-                        <div className="text-center w-full">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {file.name}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {file.is_dir ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                Directory
-                              </span>
-                            ) : (
-                              <div className="truncate">
-                                <div>{(file.size / 1024).toFixed(1)} KB</div>
-                                <div className="hidden sm:block">{new Date(file.mod_time).toLocaleDateString()}</div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex justify-center space-x-2 mt-2">
-                            {!file.is_dir && (
-                              <button 
-                                onClick={async () => {
-                                  try {
-                                    await navigator.clipboard.writeText(file.url);
-                                    setCopyStatus({...copyStatus, [file.name]: '已复制!'});
-                                    // 2秒后清除状态
-                                    setTimeout(() => {
-                                      setCopyStatus(prev => {
-                                        const newStatus = {...prev};
-                                        delete newStatus[file.name];
-                                        return newStatus;
-                                      });
-                                    }, 2000);
-                                  } catch (err) {
-                                    setCopyStatus({...copyStatus, [file.name]: '复制失败'});
-                                    console.error('Failed to copy: ', err);
-                                  }
-                                }}
-                                className="text-xs text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                              >
-                                {copyStatus[file.name] || '复制链接'}
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => handleOpenRenameModal(file.name)}
-                              className="text-xs text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300"
-                            >
-                              重命名
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteFile(file.name, file.is_dir)}
-                              className="text-xs text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                            >
-                              删除
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <FileGrid 
+                files={files}
+                onNavigateToDirectory={handleNavigateToDirectory}
+                onOpenRenameModal={handleOpenRenameModal}
+                onDeleteFile={handleDeleteFile}
+                copyStatus={copyStatus}
+                onCopyLink={async (url, filename, setCopyStatusCallback) => {
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    setCopyStatus(prev => ({...prev, [filename]: '已复制!'}));
+                    // 2秒后清除状态
+                    setTimeout(() => {
+                      setCopyStatus(prev => {
+                        const newStatus = {...prev};
+                        delete newStatus[filename];
+                        return newStatus;
+                      });
+                    }, 2000);
+                  } catch (err) {
+                    setCopyStatus(prev => ({...prev, [filename]: '复制失败'}));
+                    console.error('Failed to copy: ', err);
+                  }
+                }}
+                setCopyStatus={setCopyStatus}
+              />
             </div>
           )}
+          
+          <Pagination 
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalFiles={pagination.totalFiles}
+            perPage={pagination.perPage}
+            onPageChange={(page) => loadFiles(currentPath, page)}
+          />
         </div>
       </main>
 

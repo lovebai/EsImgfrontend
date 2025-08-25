@@ -35,9 +35,17 @@ export interface FileInfo {
   url: string;
 }
 
+export interface PaginationInfo {
+  current_page: number;
+  total_pages: number;
+  total_files: number;
+  per_page: number;
+}
+
 export interface FileListResponse {
   path: string;
   files: FileInfo[];
+  pagination: PaginationInfo;
 }
 
 // Public upload files to the server (for homepage/anonymous users)
@@ -189,15 +197,15 @@ export async function login(username: string, password: string, turnstileToken?:
   }
 }
 
-// Get list of files and directories
-export async function getFiles(path: string = '/'): Promise<FileInfo[]> {
+// Get list of files and directories with pagination
+export async function getFiles(path: string = '/', page: number = 1, limit: number = 18): Promise<FileListResponse> {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('No authentication token found');
     }
     
-    const response = await fetch(`${API_BASE_URL}/v1/filelist?path=${encodeURIComponent(path)}`, {
+    const response = await fetch(`${API_BASE_URL}/v1/filelist?path=${encodeURIComponent(path)}&page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -209,8 +217,7 @@ export async function getFiles(path: string = '/'): Promise<FileInfo[]> {
     }
     
     const data: FileListResponse = await response.json();
-    // Return all files and directories (don't filter out directories)
-    return data.files;
+    return data;
   } catch (error) {
     console.error('Fetch files error:', error);
     throw error;
