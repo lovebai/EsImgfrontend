@@ -98,8 +98,9 @@ export async function uploadFiles(files: File[]): Promise<UploadResponse[]> {
 export async function adminUploadFiles(files: File[], path: string = '/'): Promise<AdminUploadResponse[]> {
   const formData = new FormData();
   
+  // Use 'files' instead of 'file' for multiple file upload support
   files.forEach((file) => {
-    formData.append('file', file); // Note: admin endpoint expects 'file' not 'files'
+    formData.append('files', file);
   });
   
   try {
@@ -116,21 +117,43 @@ export async function adminUploadFiles(files: File[], path: string = '/'): Promi
     }
     
     const data = await response.json();
+    
     // Transform the backend response to match our expected format
-    return [{
-      message: data.message,
-      file: {
-        name: data.file.name,
-        size: data.file.size,
-        is_dir: data.file.is_dir,
-        mod_time: data.file.mod_time,
-        url: data.file.url,
-        directLink: data.file.url,
-        markdown: `![${data.file.name}](${data.file.url})`,
-        bbs: `[img]${data.file.url}[/img]`,
-        html: `<img src="${data.file.url}" alt="${data.file.name}" />`
-      }
-    }];
+    if (data.files && Array.isArray(data.files)) {
+      // Handle multiple file upload response
+      return data.files.map((file: any) => ({
+        message: data.message,
+        file: {
+          name: file.name,
+          size: file.size,
+          is_dir: file.is_dir,
+          mod_time: file.mod_time,
+          url: file.url,
+          directLink: file.url,
+          markdown: `![${file.name}](${file.url})`,
+          bbs: `[img]${file.url}[/img]`,
+          html: `<img src="${file.url}" alt="${file.name}" />`
+        }
+      }));
+    } else if (data.file) {
+      // Handle single file upload response (backward compatibility)
+      return [{
+        message: data.message,
+        file: {
+          name: data.file.name,
+          size: data.file.size,
+          is_dir: data.file.is_dir,
+          mod_time: data.file.mod_time,
+          url: data.file.url,
+          directLink: data.file.url,
+          markdown: `![${data.file.name}](${data.file.url})`,
+          bbs: `[img]${data.file.url}[/img]`,
+          html: `<img src="${data.file.url}" alt="${data.file.name}" />`
+        }
+      }];
+    } else {
+      throw new Error('Unexpected response format from server');
+    }
   } catch (error) {
     console.error('Admin upload error:', error);
     throw error;
