@@ -1,105 +1,95 @@
 # EasyImg Frontend
 
-This is the frontend application for the EasyImg image hosting service, built with Next.js and TailwindCSS.
+基于 Next.js + TailwindCSS 的图片托管服务前端。
 
-## Features
+## 功能特性
 
-- Multi-file image upload
-- Image preview after upload
-- Copy links in various formats (direct, markdown, BBS, HTML)
-- Admin dashboard with authentication
-- File management capabilities
+- 多文件上传
+- 上传后预览，支持多种格式复制链接（直链、Markdown、BBS、HTML）
+- 管理后台（文件管理、上传、删除、重命名）
+- JWT 认证
+- Cloudflare Turnstile 验证码支持
+- 深色模式
 
-## Prerequisites
+## 环境要求
 
-- Node.js (version 16 or higher)
-- npm or yarn
+- Node.js 16+
+- npm 或 yarn
 
-## Getting Started
+## 快速开始
 
-1. Install dependencies:
+1. 安装依赖：
    ```bash
    npm install
    ```
 
-2. Run the development server:
+2. 配置环境变量（创建 `.env.local`）：
+
+   ```env
+   NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api
+   NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+   ```
+
+3. 启动开发服务器：
    ```bash
    npm run dev
    ```
 
-3. Open your browser and navigate to http://localhost:8002
+4. 访问 http://localhost:8002
 
-## Project Structure
+## 项目结构
 
 ```
-frontend/
-├── src/
-│   ├── app/              # Next.js app router pages
-│   │   ├── layout.tsx    # Root layout with AuthProvider
-│   │   ├── page.tsx      # Home page
-│   │   ├── upload/       # Upload page
-│   │   ├── login/        # Login page
-│   │   └── dashboard/    # Admin dashboard
-│   ├── components/       # React components
-│   │   └── AuthProvider.tsx  # Authentication context
-│   ├── lib/              # Utility functions and API service
-│   │   └── api.ts        # API service for backend communication
-│   └── styles/           # Global styles
-│       └── globals.css   # TailwindCSS imports
-├── public/               # Static assets
-├── next.config.js        # Next.js configuration with proxy
-├── tailwind.config.js    # TailwindCSS configuration
-├── postcss.config.js     # PostCSS configuration
-└── tsconfig.json         # TypeScript configuration
+src/
+├── app/              # Next.js app router 页面
+│   ├── layout.tsx    # 根布局（含 AuthProvider）
+│   ├── page.tsx      # 首页（文件上传）
+│   ├── upload/       # 上传页面
+│   ├── login/        # 登录页面（含 Turnstile 验证）
+│   └── dashboard/    # 管理后台
+├── components/       # 通用组件
+│   └── AuthProvider.tsx  # 认证上下文
+├── lib/              # 工具函数
+│   └── api.ts        # 后端 API 通信
+└── styles/           # 全局样式
+    └── globals.css   # TailwindCSS
 ```
 
-## Configuration
+## 配置
 
-The frontend is configured to:
-- Run on port 8002 (set in package.json scripts)
-- Communicate with the backend through a proxy at /api (configured in next.config.js)
-- Backend API endpoints are proxied to http://127.0.0.1:8001
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `NEXT_PUBLIC_API_URL` | 后端 API 地址 | `/api` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile 站点密钥 | `1x00000000000000000000AA`（测试密钥） |
 
-## Proxy Configuration
+### Cloudflare Turnstile
 
-To solve CORS issues, we've implemented a proxy in Next.js that forwards API requests from `/api/*` to `http://127.0.0.1:8001/api/*`. This ensures that all API calls are made from the same origin as the frontend.
+登录页面集成了 Turnstile 验证码。在 Cloudflare 后台获取站点密钥和密钥密钥：
 
-The proxy configuration is defined in `next.config.js`:
+1. 进入 [Cloudflare Dashboard](https://dash.cloudflare.com/) → Turnstile
+2. 添加站点，获取 Site Key 和 Secret Key
+3. 前端 `.env.local` 设置 `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+4. 后端 `conf/config.yaml` 设置 `turnstile_secret_key`
 
-```javascript
-module.exports = {
-  reactStrictMode: true,
-  swcMinify: true,
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://127.0.0.1:8001/api/:path*',
-      },
-    ]
-  },
-}
-```
+> 开发环境使用 `NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA`（始终通过的测试密钥），后端 `debug: true` 时会自动跳过验证。
 
-## Development
+## 可用脚本
 
-### Available Scripts
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 开发模式（端口 8002） |
+| `npm run build` | 生产构建 |
+| `npm start` | 启动生产模式 |
+| `npm run lint` | 代码检查 |
 
-- `npm run dev` - Runs the app in development mode on port 8002
-- `npm run build` - Builds the app for production
-- `npm start` - Runs the built app in production mode
-- `npm run lint` - Runs the linter
+## API 通信
 
-## Authentication
+前端直接通过 `NEXT_PUBLIC_API_URL` 配置的地址调用后端 API（不再使用 Next.js 代理转发），后端 CORS 已全开。
 
-The admin section is protected and requires login. Use the credentials provided by your backend service.
-
-## API Integration
-
-All API calls are made through the proxy:
-- Upload files: POST `/api/upload`
-- Login: POST `/api/login`
-- Get files: GET `/api/files`
-- Delete file: DELETE `/api/files/{id}`
-
-This approach eliminates CORS issues by ensuring all requests originate from the same domain.
+- `POST /api/upload` — 上传文件
+- `POST /api/v1/login` — 管理员登录
+- `GET /api/v1/filelist` — 文件列表
+- `POST /api/v1/upload` — 管理员上传
+- `DELETE /api/v1/delete` — 删除文件
+- `POST /api/v1/rename` — 重命名文件
+- `POST /api/v1/addfile` — 新建目录
