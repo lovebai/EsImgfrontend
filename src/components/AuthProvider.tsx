@@ -39,21 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const login = async (username: string, password: string, turnstileToken?: string): Promise<boolean> => {
-    try {
-      // Call the API login function with Turnstile token
-      const result = await apiLogin(username, password, turnstileToken);
-      if (result) {
-        // Store token and expiration time
-        localStorage.setItem('token', result.token);
-        localStorage.setItem('expireAt', result.expireAt.toString());
-        setIsAuthenticated(true);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
+    // Call the API login function with Turnstile token
+    const result = await apiLogin(username, password, turnstileToken);
+    // Store token and expiration time
+    localStorage.setItem('token', result.token);
+    localStorage.setItem('expireAt', result.expireAt.toString());
+    setIsAuthenticated(true);
+    return true;
   };
 
   const logout = () => {

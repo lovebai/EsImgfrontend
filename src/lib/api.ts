@@ -187,37 +187,33 @@ export async function createDirectory(dirname: string, path: string = '/'): Prom
 }
 
 // Authenticate user
-export async function login(username: string, password: string, turnstileToken?: string): Promise<{token: string, expireAt: number} | null> {
-  try {
-    const requestBody: any = { username, password };
-    if (turnstileToken) {
-      requestBody.turnstileToken = turnstileToken;
-    }
-    
-    const response = await fetch(`${API_BASE_URL}/v1/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    const data = await response.json();
-    if (data.data && data.data.token) {
-      return {
-        token: data.data.token,
-        expireAt: data.data.expire_at
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Login error:', error);
-    return null;
+export async function login(username: string, password: string, turnstileToken?: string): Promise<{token: string, expireAt: number}> {
+  const requestBody: any = { username, password };
+  if (turnstileToken) {
+    requestBody.turnstileToken = turnstileToken;
   }
+
+  const response = await fetch(`${API_BASE_URL}/v1/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Invalid username or password');
+  }
+
+  if (data.data && data.data.token) {
+    return {
+      token: data.data.token,
+      expireAt: data.data.expire_at
+    };
+  }
+  throw new Error('Invalid username or password');
 }
 
 // Get list of files and directories with pagination

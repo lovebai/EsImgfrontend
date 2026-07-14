@@ -148,20 +148,11 @@ export default function LoginPage() {
     
     try {
       // Pass Turnstile token to login function
-      const success = await login(username, password, tokenToUse);
-      if (success) {
-        router.push('/dashboard');
-      } else {
-        setError('Invalid username or password');
-        // Reset Turnstile on failed login
-        if (turnstileWidgetId && window.turnstile) {
-          window.turnstile.reset(turnstileWidgetId);
-          setTurnstileToken('');
-        }
-      }
-    } catch (err) {
-      setError('An error occurred during login');
-      // Reset Turnstile on error
+      await login(username, password, tokenToUse);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Invalid username or password');
+      // Reset Turnstile on failed login
       if (turnstileWidgetId && window.turnstile) {
         window.turnstile.reset(turnstileWidgetId);
         setTurnstileToken('');
