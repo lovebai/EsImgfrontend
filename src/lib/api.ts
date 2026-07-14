@@ -201,10 +201,15 @@ export async function login(username: string, password: string, turnstileToken?:
     body: JSON.stringify(requestBody),
   });
 
-  const data = await response.json();
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(response.ok ? 'Invalid response from server' : `Server error (${response.status}) — please check that the backend is running`);
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Invalid username or password');
+    throw new Error(data.error || `Server error (${response.status})`);
   }
 
   if (data.data && data.data.token) {
