@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 declare global {
   interface Window {
@@ -15,19 +15,21 @@ declare global {
 }
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(
+    null,
+  );
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
@@ -38,29 +40,31 @@ export default function LoginPage() {
 
     const loadTurnstile = () => {
       // Check if Turnstile is already initialized
-      const container = document.getElementById('turnstile-container');
+      const container = document.getElementById("turnstile-container");
       if (!container) return;
 
       // Check if widget already exists
       if (container.children.length > 0) return;
 
       // Clear container first
-      container.innerHTML = '';
+      container.innerHTML = "";
 
-      if (typeof window !== 'undefined' && window.turnstile) {
-        widgetId = window.turnstile.render('#turnstile-container', {
-          sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
-          theme: 'light',
+      if (typeof window !== "undefined" && window.turnstile) {
+        widgetId = window.turnstile.render("#turnstile-container", {
+          sitekey:
+            process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+            "1x00000000000000000000AA",
+          theme: "light",
           callback: (token: string) => {
             if (isMounted) {
               setTurnstileToken(token);
             }
           },
-          'error-callback': () => {
+          "error-callback": () => {
             if (isMounted) {
-              setError('Failed to load CAPTCHA. Please try again.');
+              setError("Failed to load CAPTCHA. Please try again.");
             }
-          }
+          },
         });
 
         if (isMounted) {
@@ -71,20 +75,24 @@ export default function LoginPage() {
 
     // 在开发环境中，如果Turnstile没有加载，显示一个测试组件
     const renderTestTurnstile = () => {
-      const container = document.getElementById('turnstile-container');
-      if (container && process.env.NODE_ENV === 'development') {
-        container.innerHTML = '<div style="padding: 10px; border: 1px solid #ccc; background: #f5f5f5; text-align: center;">Test Turnstile Widget<br/>(Click to simulate verification)<br/><button onclick="document.querySelector(\'#turnstile-container\').innerHTML=\'Verified\'; document.querySelector(\'button[type=submit]\').disabled=false;" style="margin-top: 5px; padding: 5px 10px; background: #0070f3; color: white; border: none; border-radius: 4px; cursor: pointer;">Simulate Verification</button></div>';
+      const container = document.getElementById("turnstile-container");
+      if (container && process.env.NODE_ENV === "development") {
+        container.innerHTML =
+          "<div style=\"padding: 10px; border: 1px solid #ccc; background: #f5f5f5; text-align: center;\">Test Turnstile Widget<br/>(Click to simulate verification)<br/><button onclick=\"document.querySelector('#turnstile-container').innerHTML='Verified'; document.querySelector('button[type=submit]').disabled=false;\" style=\"margin-top: 5px; padding: 5px 10px; background: #0070f3; color: white; border: none; border-radius: 4px; cursor: pointer;\">Simulate Verification</button></div>";
       }
     };
 
     // Load Turnstile script
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       if (!window.turnstile) {
         // Check if script already exists
-        const existingScript = document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]');
+        const existingScript = document.querySelector(
+          'script[src*="challenges.cloudflare.com/turnstile"]',
+        );
         if (!existingScript) {
-          const script = document.createElement('script');
-          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback';
+          const script = document.createElement("script");
+          script.src =
+            "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
           script.async = true;
           script.defer = true;
           (window as any).onloadTurnstileCallback = () => {
@@ -101,9 +109,9 @@ export default function LoginPage() {
             }
           }, 100);
         }
-        
+
         // 在开发环境中，如果没有加载Turnstile，显示测试组件
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === "development") {
           setTimeout(() => {
             if (isMounted && !window.turnstile) {
               renderTestTurnstile();
@@ -131,31 +139,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    
+    setError("");
+
     // Check if Turnstile token is available (skip in development)
-    if (!turnstileToken && process.env.NODE_ENV !== 'development') {
-      setError('Please complete the CAPTCHA verification');
+    if (!turnstileToken && process.env.NODE_ENV !== "development") {
+      setError("Please complete the CAPTCHA verification");
       setIsLoading(false);
       return;
     }
-    
+
     // In development mode, use a test token if none is provided
     let tokenToUse = turnstileToken;
-    if (process.env.NODE_ENV === 'development' && !turnstileToken) {
-      tokenToUse = 'test-token'; // Use a test token in development
+    if (process.env.NODE_ENV === "development" && !turnstileToken) {
+      tokenToUse = "test-token"; // Use a test token in development
     }
-    
+
     try {
       // Pass Turnstile token to login function
       await login(username, password, tokenToUse);
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || 'Invalid username or password');
+      setError(err.message || "Invalid username or password");
       // Reset Turnstile on failed login
       if (turnstileWidgetId && window.turnstile) {
         window.turnstile.reset(turnstileWidgetId);
-        setTurnstileToken('');
+        setTurnstileToken("");
       }
     } finally {
       setIsLoading(false);
@@ -213,9 +221,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">
-              {error}
-            </div>
+            <div className="text-red-500 text-sm text-center">{error}</div>
           )}
 
           <div>
@@ -224,7 +230,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </form>
